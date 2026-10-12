@@ -1,6 +1,7 @@
 import streamlit as st
 import json
 import os
+import requests
 import urllib.parse
 from datetime import date, datetime, timedelta
 
@@ -12,9 +13,10 @@ st.set_page_config(
 )
 
 DB_FILE = "pasien_malaria.json"
-LINK_GOOGLE_FORM = "https://docs.google.com/forms/d/e/1FAIpQLSf-SQaYqM3jkpoD4AWjx6nSibUmjRko4JaktBCDlsfwi4H-QA/viewform"
+# URL Web App Google Apps Script Anda yang sudah terhubung
+GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzWTcidGkFxDCY_KFRZxZpCFEJMAkrQleNLPP6KeBhgdi5PgWYtFGSCbg5baWYPuPFW/exec"
 
-# Fungsi aman untuk memuat atau membuat database JSON otomatis
+# Fungsi aman untuk memuat atau membuat database JSON lokal
 def load_data():
     try:
         if not os.path.exists(DB_FILE):
@@ -55,6 +57,14 @@ def save_data(data):
     with open(DB_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
 
+# Fungsi kirim data ke Google Apps Script (Webhook ke Google Sheets/Form)
+def sync_to_google_sheets(payload):
+    try:
+        response = requests.post(GOOGLE_APPS_SCRIPT_URL, json=payload, timeout=10)
+        return response.status_code == 200
+    except Exception:
+        return False
+
 # Hitung jadwal kontrol Hari ke-3, 7, 14, 28
 def hitung_jadwal_kontrol(tgl_kunjung):
     base_date = datetime.strptime(tgl_kunjung, "%Y-%m-%d").date()
@@ -73,16 +83,11 @@ st.title("🦟 MALARIA-YA")
 st.markdown("### Sistem Pengingat, Pengobatan & Manajemen Data Pasien — Puskesmas Tirta Jaya")
 st.markdown("---")
 
-# Sidebar untuk Input Data & Tautan Google Form
+# Sidebar untuk Input Data
 with st.sidebar:
-    st.header("📥 Input Data Pasien")
-    st.markdown("Gunakan Google Form resmi untuk arsip data pusat, atau input cepat di bawah ini:")
+    st.header("📥 Input Data Pasien Baru")
+    st.markdown("Klik **Save** untuk menyimpan data ke dashboard sekaligus merekamnya ke database Google Sheets.")
     
-    # Tombol Akses Google Form Asli (Dijamin Masuk ke Form Anda)
-    st.markdown(f'<a href="{LINK_GOOGLE_FORM}" target="_blank" style="background-color:#4285F4; color:white; padding:10px 14px; border-radius:6px; text-decoration:none; font-weight:bold; display:block; text-align:center; margin-bottom:15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">🌐 Buka Google Form Resmi</a>', unsafe_allow_html=True)
-    st.markdown("---")
-    
-    st.subheader("Atau Input Cepat Lokal:")
     with st.form("form_tambah_pasien"):
         f_nama = st.text_input("Nama Lengkap Pasien")
         f_umur = st.number_input("Umur (Tahun)", min_value=1, max_value=120, value=30)
@@ -94,7 +99,7 @@ with st.sidebar:
         f_pengobatan = st.text_input("Pengobatan", value="DHP + Primakuin")
         f_tgl = st.date_input("Tanggal Berkunjung / Hari ke-1", value=date.today())
         
-        submit_btn = st.form_submit_button("Simpan Data ke Dashboard")
+        submit_btn = st.form_submit_button("💾 Save ke Dashboard & Google Sheets")
         
         if submit_btn:
             if f_nama and f_hp and f_alamat:
@@ -114,9 +119,18 @@ with st.sidebar:
                     "status": "Aktif"
                 }
                 
+                # Simpan lokal
                 data_pasien.append(newItem)
                 save_data(data_pasien)
-                st.success(f"Data pasien **{f_nama}** berhasil disimpan di dashboard!")
+                
+                # Sinkronisasi otomatis ke Google Sheets via Web App
+                sync_success = sync_to_google_sheets(newItem)
+                
+                if sync_success:
+                    st.success(f"Data pasien **{f_nama}** berhasil disave & masuk ke Google Sheets!")
+                else:
+                    st.warning(f"Data pasien **{f_nama}** tersimpan di dashboard lokal (Gagal sync ke Google Sheets).")
+                
                 st.rerun()
             else:
                 st.error("Mohon isi minimal Nama, No HP, dan Alamat.")
@@ -137,7 +151,7 @@ with col1:
 with col2:
     st.metric(label="Jadwal Kontrol Hari Ini", value=count_today, delta="Prioritas Utama")
 with col3:
-    st.metric(label="Status Sistem", value="🟢 Aktif & Siap Digunakan")
+    st.metric(label="Status Sistem", value="🟢 Terhubung ke Google Sheets")
 
 st.markdown("---")
 
