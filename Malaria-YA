@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MALARIA-YA — Puskesmas Tirta Jaya</title>
+    <style>
+        :root {
+            --primary: #0284c7;
+            --primary-dark: #0369a1;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 20px;
+            margin-bottom: 25px;
+        }
+
+        .brand h1 {
+            margin: 0;
+            color: var(--primary);
+            font-size: 26px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .brand p {
+            margin: 5px 0 0 0;
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        .date-badge {
+            background-color: #e0f2fe;
+            color: #0369a1;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: #f1f5f9;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 5px solid var(--primary);
+        }
+
+        .stat-card h3 {
+            margin: 0 0 8px 0;
+            font-size: 14px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .stat-card .number {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--text-main);
+        }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .search-box input {
+            padding: 10px 15px;
+            width: 300px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .search-box input:focus {
+            border-color: var(--primary);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 14px 16px;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        th {
+            background-color: var(--primary);
+            color: white;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 0.5px;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
+        .badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            display: inline-block;
+        }
+
+        .bg-h1 { background-color: #fee2e2; color: #991b1b; }
+        .bg-h3 { background-color: #ffedd5; color: #9a3412; }
+        .bg-h7 { background-color: #fef9c3; color: #854d0e; }
+        .bg-h14 { background-color: #e0f2fe; color: #075985; }
+        .bg-h28 { background-color: #dcfce7; color: #166534; }
+        .bg-none { background-color: #f1f5f9; color: var(--text-muted); }
+
+        .btn-wa {
+            background-color: #22c55e;
+            color: white;
+            padding: 8px 14px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            transition: background 0.2s;
+            box-shadow: 0 2px 4px rgba(34, 197, 94, 0.2);
+        }
+
+        .btn-wa:hover {
+            background-color: #16a34a;
+        }
+
+        footer {
+            margin-top: 40px;
+            text-align: center;
+            font-size: 13px;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border-color);
+            padding-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <div class="brand">
+                <h1>MALARIA-YA</h1>
+                <p>Sistem Pengingat & Manajemen Data Pasien — Puskesmas Tirta Jaya</p>
+            </div>
+            <div class="date-badge" id="current-date-label">Memuat Tanggal...</div>
+        </header>
+
+        <!-- Ringkasan Statistik -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Total Pasien Terdaftar</h3>
+                <div class="number" id="stat-total">0</div>
+            </div>
+            <div class="stat-card" style="border-left-color: #ef4444;">
+                <h3>Jadwal Reminder Hari Ini</h3>
+                <div class="number" id="stat-today">0</div>
+            </div>
+            <div class="stat-card" style="border-left-color: #22c55e;">
+                <h3>Status Sistem</h3>
+                <div class="number" style="font-size: 18px; color: #16a34a; margin-top: 5px;">🟢 Aktif (GitHub JSON)</div>
+            </div>
+        </div>
+
+        <!-- Toolbar Pencarian -->
+        <div class="toolbar">
+            <div class="search-box">
+                <input type="text" id="search-input" placeholder="🔍 Cari nama pasien atau alamat..." onkeyup="filterPasien()">
+            </div>
+            <div>
+                <span style="font-size: 13px; color: var(--text-muted);">Menampilkan seluruh riwayat pasien masuk.</span>
+            </div>
+        </div>
+
+        <!-- Tabel Data Pasien -->
+        <table>
+            <thead>
+                <tr>
+                    <th>Nama & Umur</th>
+                    <th>Kontak (WhatsApp)</th>
+                    <th>Alamat & Pekerjaan</th>
+                    <th>Riwayat Perjalanan</th>
+                    <th>Tgl Berkunjung</th>
+                    <th>Status Reminder Hari Ini</th>
+                    <th>Aksi Manual</th>
+                </tr>
+            </thead>
+            <tbody id="tabel-pasien">
+                <tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 30px;">Memuat data pasien...</td></tr>
+            </tbody>
+        </table>
+
+        <footer>
+            &copy; 2026 Puskesmas Tirta Jaya | Integrasi Google Form & GitHub Database
+        </footer>
+    </div>
+
+    <script>
+        let globalData = [];
+        const today = new Date().toLocaleDateString('en-CA'); // Format YYYY-MM-DD
+        document.getElementById('current-date-label').innerText = "Hari Ini: " + today;
+
+        // Ambil data dari file pasien_malaria.json di Repository GitHub
+        fetch('pasien_malaria.json?' + new Date().getTime()) // Anti-cache
+            .then(response => {
+                if (!response.ok) throw new Error("File JSON tidak ditemukan.");
+                return response.json();
+            })
+            .then(data => {
+                globalData = data;
+                renderTabel(data);
+                hitungStatistik(data);
+            })
+            .catch(error => {
+                console.error('Gagal memuat data:', error);
+                document.getElementById('tabel-pasien').innerHTML = `<tr><td colspan="7" style="text-align: center; color: #ef4444; padding: 25px;">Gagal memuat data dari <code>pasien_malaria.json</code>. Pastikan file tersebut sudah ada di repository Anda.</td></tr>`;
+            });
+
+        function renderTabel(dataPasien) {
+            const tbody = document.getElementById('tabel-pasien');
+            tbody.innerHTML = '';
+
+            if (dataPasien.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 30px;">Belum ada data pasien yang masuk.</td></tr>`;
+                return;
+            }
+
+            dataPasien.forEach(patient => {
+                const j = patient.jadwal_reminder || {};
+                let statusHari = "Tidak Ada Jadwal";
+                let badgeClass = "bg-none";
+
+                // Deteksi status reminder hari ini
+                if (j.h_1 === today) { statusHari = "Hari ke-1"; badgeClass = "bg-h1"; }
+                else if (j.h_3 === today) { statusHari = "Hari ke-3"; badgeClass = "bg-h3"; }
+                else if (j.h_7 === today) { statusHari = "Hari ke-7"; badgeClass = "bg-h7"; }
+                else if (j.h_14 === today) { statusHari = "Hari ke-14"; badgeClass = "bg-h14"; }
+                else if (j.h_28 === today) { statusHari = "Hari ke-28"; badgeClass = "bg-h28"; }
+
+                // Format nomor HP untuk tombol WA (Ubah 08... jadi 628...)
+                let rawHP = patient.no_hp ? patient.no_hp.toString().trim() : "";
+                let formattedHP = rawHP.replace(/^0/, '62');
+
+                // Template Pesan WhatsApp
+                const pesanWA = `Halo Bapak/Ibu *${patient.nama}*,\n\nSalam sehat dari *Puskesmas Tirta Jaya*.\n\nIni adalah pesan pengingat untuk jadwal minum obat / kontrol malaria Anda (${statusHari}) pada hari ini. Mohon pastikan obat dihabiskan sesuai dosis agar proses penyembuhan berjalan optimal.\n\nJika ada keluhan atau efek samping, segera hubungi tenaga medis kami. Terima kasih!`;
+                
+                const waLink = rawHP ? `https://api.whatsapp.com/send?phone=${formattedHP}&text=${encodeURIComponent(pesanWA)}` : "#";
+
+                const row = `<tr>
+                    <td><strong>${patient.nama}</strong><br><small style="color: var(--text-muted);">${patient.umur} Tahun</small></td>
+                    <td><code>${patient.no_hp || '-'}</code></td>
+                    <td>${patient.alamat}<br><small style="color: var(--text-muted);">Pekerjaan: ${patient.tempat_bekerja || '-'}</small></td>
+                    <td>${patient.riwayat_perjalanan || '-'}</td>
+                    <td>${patient.tanggal_berkunjung || '-'}</td>
+                    <td><span class="badge ${badgeClass}">${statusHari}</span></td>
+                    <td>
+                        ${rawHP ? `<a href="${waLink}" target="_blank" class="btn-wa">💬 Kirim WA</a>` : '<span style="color:#94a3b8; font-size:12px;">No HP Invalid</span>'}
+                    </td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+        }
+
+        function hitungStatistik(dataPasien) {
+            document.getElementById('stat-total').innerText = dataPasien.length;
+            
+            let countToday = dataPasien.filter(patient => {
+                const j = patient.jadwal_reminder || {};
+                return j.h_1 === today || j.h_3 === today || j.h_7 === today || j.h_14 === today || j.h_28 === today;
+            }).length;
+
+            document.getElementById('stat-today').innerText = countToday;
+        }
+
+        function filterPasien() {
+            const keyword = document.getElementById('search-input').value.toLowerCase();
+            const filtered = globalData.filter(p => 
+                (p.nama && p.nama.toLowerCase().includes(keyword)) || 
+                (p.alamat && p.alamat.toLowerCase().includes(keyword))
+            );
+            renderTabel(filtered);
+        }
+    </script>
+</body>
+</html>
