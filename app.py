@@ -11,41 +11,62 @@ st.set_page_config(
     layout="wide"
 )
 
-# Nama File Database Internal di GitHub
 DB_FILE = "pasien_malaria.json"
+LINK_GOOGLE_FORM = "https://docs.google.com/forms/d/e/1FAIpQLSf-SQaYqM3jkpoD4AWjx6nSibUmjRko4JaktBCDlsfwi4H-QA/viewform"
 
-# Fungsi untuk memuat atau membuat database JSON otomatis
+# Fungsi aman untuk memuat atau membuat database JSON otomatis
 def load_data():
-    if not os.path.exists(DB_FILE):
-        # Jika file belum ada, buat file JSON baru dengan data contoh awal
-        initial_data = [
-            {
-                "id": "MLR-1786523400000",
-                "nama": "Budi Santoso",
-                "umur": 34,
-                "no_hp": "081234567890",
-                "alamat": "RT 02 / RW 01, Desa Tirta Jaya",
-                "tempat_bekerja": "Perkebunan Sawit PT Makmur",
-                "riwayat_perjalanan": "Baru pulang dari Palangka Raya",
-                "tanggal_berkunjung": "2026-10-12",
-                "jadwal_reminder": {
-                    "h_1": "2026-10-13",
-                    "h_3": "2026-10-15",
-                    "h_7": "2026-10-19",
-                    "h_14": "2026-10-26",
-                    "h_28": "2026-11-09"
-                },
-                "status": "Aktif"
-            }
-        ]
-        with open(DB_FILE, "w", encoding="utf-8") as f:
-            json.dump(initial_data, f, ensure_ascii=False, indent=4)
-            
     try:
+        if not os.path.exists(DB_FILE):
+            initial_data = [
+                {
+                    "id": "MLR-1786523400000",
+                    "nama": "Budi Santoso",
+                    "umur": 34,
+                    "no_hp": "081234567890",
+                    "alamat": "RT 02 / RW 01, Desa Tirta Jaya",
+                    "tempat_bekerja": "Perkebunan Sawit PT Makmur",
+                    "riwayat_perjalanan": "Baru pulang dari Palangka Raya",
+                    "tanggal_berkunjung": "2026-10-12",
+                    "jadwal_reminder": {
+                        "h_1": "2026-10-13",
+                        "h_3": "2026-10-15",
+                        "h_7": "2026-10-19",
+                        "h_14": "2026-10-26",
+                        "h_28": "2026-11-09"
+                    },
+                    "status": "Aktif"
+                }
+            ]
+            with open(DB_FILE, "w", encoding="utf-8") as f:
+                json.dump(initial_data, f, ensure_ascii=False, indent=4)
+                
         with open(DB_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+            content = f.read()
+            if not content.strip():
+                return []
+            return json.loads(content)
     except Exception:
         return []
+
+# Fungsi untuk menyimpan data baru
+def save_data(data):
+    with open(DB_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+
+# Fungsi hitung tanggal reminder (H1, H3, H7, H14, H28)
+def hitung_reminder(tgl_kunjung):
+    from datetime import timedelta
+    base_date = datetime.strptime(tgl_kunjung, "%Y-%m-%d").date()
+    return {
+        "h_1": str(base_date + timedelta(days=1)),
+        "h_3": str(base_date + timedelta(days=3)),
+        "h_7": str(base_date + timedelta(days=7)),
+        "h_14": str(base_date + timedelta(days=14)),
+        "h_28": str(base_date + timedelta(days=28))
+    }
+
+from datetime import datetime
 
 data_pasien = load_data()
 today_str = date.today().strftime("%Y-%m-%d")
@@ -54,6 +75,48 @@ today_str = date.today().strftime("%Y-%m-%d")
 st.title("🦟 MALARIA-YA")
 st.markdown("### Sistem Pengingat & Manajemen Data Pasien — Puskesmas Tirta Jaya")
 st.markdown("---")
+
+# Sidebar untuk Input Data & Tautan Google Form
+with st.sidebar:
+    st.header("📥 Tambah Data Pasien")
+    st.markdown("Isi form di bawah atau gunakan Google Form resmi.")
+    
+    # Tombol Akses Google Form Asli
+    st.markdown(f'<a href="{LINK_GOOGLE_FORM}" target="_blank" style="background-color:#4285F4; color:white; padding:8px 12px; border-radius:6px; text-decoration:none; font-weight:bold; display:block; text-align:center; margin-bottom:15px;">🌐 Buka Google Form Asli</a>', unsafe_allow_html=True)
+    st.markdown("---")
+    
+    with st.form("form_tambah_pasien"):
+        f_nama = st.text_input("Nama Lengkap Pasien")
+        f_umur = st.number_input("Umur (Tahun)", min_value=1, max_value=120, value=30)
+        f_hp = st.text_input("Nomor WhatsApp (Contoh: 0812...)")
+        f_alamat = st.text_area("Alamat Lengkap")
+        f_kerja = st.text_input("Tempat Bekerja")
+        f_riwayat = st.text_input("Riwayat Perjalanan (1 Bulan Terakhir)")
+        f_tgl = st.date_input("Tanggal Berkunjung / Diagnosis", value=date.today())
+        
+        submit_btn = st.form_submit_button("Simpan Data Pasien")
+        
+        if submit_btn:
+            if f_nama and f_hp and f_alamat:
+                tgl_str = str(f_tgl)
+                newItem = {
+                    "id": "MLR-" + str(int(datetime.now().timestamp() * 1000)),
+                    "nama": f_nama,
+                    "umur": int(f_umur),
+                    "no_hp": f_hp,
+                    "alamat": f_alamat,
+                    "tempat_bekerja": f_kerja,
+                    "riwayat_perjalanan": f_riwayat,
+                    "tanggal_berkunjung": tgl_str,
+                    "jadwal_reminder": hitung_reminder(tgl_str),
+                    "status": "Aktif"
+                }
+                data_pasien.append(newItem)
+                save_data(data_pasien)
+                st.success(f"Data pasien **{f_nama}** berhasil disimpan!")
+                st.rerun()
+            else:
+                st.error("Mohon isi minimal Nama, No HP, dan Alamat.")
 
 # Hitung Statistik Ringkasan
 total_pasien = len(data_pasien)
@@ -71,7 +134,7 @@ with col1:
 with col2:
     st.metric(label="Jadwal Reminder Hari Ini", value=count_today, delta="Prioritas Utama")
 with col3:
-    st.metric(label="Status Sistem", value="🟢 Aktif (Single File Mode)")
+    st.metric(label="Status Sistem", value="🟢 Aktif & Terhubung")
 
 st.markdown("---")
 
@@ -80,9 +143,8 @@ st.subheader("📋 Daftar Pemantauan Pasien")
 search_query = st.text_input("🔍 Cari berdasarkan Nama Pasien atau Alamat:", "").lower()
 
 if total_pasien == 0:
-    st.warning("Belum ada data pasien.")
+    st.warning("Belum ada data pasien terdaftar.")
 else:
-    # Filter data menggunakan list comprehension Python
     filtered_data = []
     for p in data_pasien:
         nama = str(p.get("nama", "")).lower()
@@ -114,7 +176,6 @@ else:
                 status_hari = "Hari ke-28"
                 badge_color = "green"
 
-            # Layout Tampilan Baris Data & Tombol WA
             with st.container():
                 c1, c2, c3, c4 = st.columns([2, 2, 2, 1])
                 
