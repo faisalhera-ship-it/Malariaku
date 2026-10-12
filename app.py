@@ -13,8 +13,8 @@ st.set_page_config(
 )
 
 DB_FILE = "pasien_malaria.json"
-# URL Web App Google Apps Script Anda yang sudah terhubung
-GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzWTcidGkFxDCY_KFRZxZpCFEJMAkrQleNLPP6KeBhgdi5PgWYtFGSCbg5baWYPuPFW/exec"
+# URL Web App Google Apps Script terbaru Anda
+GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzxclYUhQTDc5aHbIBbm4OHFp5NT_zRxi26rfgOwhkf1sb1zdu5vmoeNMOOwZ5i1CeQ/exec"
 
 # Fungsi aman untuk memuat atau membuat database JSON lokal
 def load_data():
@@ -57,7 +57,7 @@ def save_data(data):
     with open(DB_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
 
-# Fungsi kirim data ke Google Apps Script (Webhook ke Google Sheets/Form)
+# Fungsi kirim data ke Google Apps Script (Webhook ke Google Sheets)
 def sync_to_google_sheets(payload):
     try:
         response = requests.post(GOOGLE_APPS_SCRIPT_URL, json=payload, timeout=10)
@@ -86,7 +86,7 @@ st.markdown("---")
 # Sidebar untuk Input Data
 with st.sidebar:
     st.header("📥 Input Data Pasien Baru")
-    st.markdown("Klik **Save** untuk menyimpan data ke dashboard sekaligus merekamnya ke database Google Sheets.")
+    st.markdown("Klik **Save** untuk menyimpan data ke dashboard sekaligus merekamnya ke Google Sheets.")
     
     with st.form("form_tambah_pasien"):
         f_nama = st.text_input("Nama Lengkap Pasien")
