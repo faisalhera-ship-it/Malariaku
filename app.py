@@ -1,8 +1,8 @@
 import streamlit as st
-import pandas as pd
 import json
+import os
 import urllib.parse
-from datetime import datetime, date
+from datetime import date
 
 # Konfigurasi Halaman Streamlit
 st.set_page_config(
@@ -11,66 +11,90 @@ st.set_page_config(
     layout="wide"
 )
 
+# Nama File Database Internal di GitHub
+DB_FILE = "pasien_malaria.json"
+
+# Fungsi untuk memuat atau membuat database JSON otomatis
+def load_data():
+    if not os.path.exists(DB_FILE):
+        # Jika file belum ada, buat file JSON baru dengan data contoh awal
+        initial_data = [
+            {
+                "id": "MLR-1786523400000",
+                "nama": "Budi Santoso",
+                "umur": 34,
+                "no_hp": "081234567890",
+                "alamat": "RT 02 / RW 01, Desa Tirta Jaya",
+                "tempat_bekerja": "Perkebunan Sawit PT Makmur",
+                "riwayat_perjalanan": "Baru pulang dari Palangka Raya",
+                "tanggal_berkunjung": "2026-10-12",
+                "jadwal_reminder": {
+                    "h_1": "2026-10-13",
+                    "h_3": "2026-10-15",
+                    "h_7": "2026-10-19",
+                    "h_14": "2026-10-26",
+                    "h_28": "2026-11-09"
+                },
+                "status": "Aktif"
+            }
+        ]
+        with open(DB_FILE, "w", encoding="utf-8") as f:
+            json.dump(initial_data, f, ensure_ascii=False, indent=4)
+            
+    try:
+        with open(DB_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+data_pasien = load_data()
+today_str = date.today().strftime("%Y-%m-%d")
+
 # Judul Utama Dashboard
 st.title("🦟 MALARIA-YA")
 st.markdown("### Sistem Pengingat & Manajemen Data Pasien — Puskesmas Tirta Jaya")
 st.markdown("---")
 
-# Fungsi untuk memuat data dari file JSON di GitHub lokal (atau direktori kerja)
-@st.cache_data(ttl=5) # Cache diperbarui tiap 5 detik agar data real-time
-def load_data():
-    try:
-        with open("pasien_malaria.json", "r", encoding="utf-8") as f:
-            data = json.load(f)
-            return data
-    except Exception as e:
-        return []
-
-data_pasien = load_data()
-
-# Kartu Statistik Ringkasan
-col1, col2, col3 = st.columns(3)
-
-today_str = date.today().strftime("%Y-%m-%d")
-
+# Hitung Statistik Ringkasan
 total_pasien = len(data_pasien)
 count_today = 0
 
-if total_pasien > 0:
-    for p in data_pasien:
-        j = p.get("jadwal_reminder", {})
-        if today_str in [j.get("h_1"), j.get("h_3"), j.get("h_7"), j.get("h_14"), j.get("h_28")]:
-            count_today += 1
+for p in data_pasien:
+    j = p.get("jadwal_reminder", {})
+    if today_str in [j.get("h_1"), j.get("h_3"), j.get("h_7"), j.get("h_14"), j.get("h_28")]:
+        count_today += 1
 
+# Tampilan Statistik
+col1, col2, col3 = st.columns(3)
 with col1:
     st.metric(label="Total Pasien Terdaftar", value=total_pasien)
 with col2:
     st.metric(label="Jadwal Reminder Hari Ini", value=count_today, delta="Prioritas Utama")
 with col3:
-    st.metric(label="Status Sistem", value="🟢 Aktif (Streamlit & GitHub)")
+    st.metric(label="Status Sistem", value="🟢 Aktif (Single File Mode)")
 
 st.markdown("---")
 
-# Filter / Pencarian Data
+# Pencarian / Filter Pasien
 st.subheader("📋 Daftar Pemantauan Pasien")
 search_query = st.text_input("🔍 Cari berdasarkan Nama Pasien atau Alamat:", "").lower()
 
 if total_pasien == 0:
-    st.warning("Belum ada data pasien di dalam file `pasien_malaria.json`.")
+    st.warning("Belum ada data pasien.")
 else:
-    # Ubah ke Pandas DataFrame untuk kemudahan filter & tampilan
-    df = pd.DataFrame(data_pasien)
-    
-    # Filter pencarian
-    if search_query:
-        df = df[df['nama'].str.lower().str.contains(search_query) | df['alamat'].str.lower().str.contains(search_query)]
+    # Filter data menggunakan list comprehension Python
+    filtered_data = []
+    for p in data_pasien:
+        nama = str(p.get("nama", "")).lower()
+        alamat = str(p.get("alamat", "")).lower()
+        if search_query in nama or search_query in alamat:
+            filtered_data.append(p)
 
-    if df.empty:
-        st.info("Tidak ditemukan data pasien yang sesuai dengan kata kunci pencarian.")
+    if not filtered_data:
+        st.info("Tidak ditemukan data pasien yang sesuai.")
     else:
-        # Loop untuk menampilkan baris data dan tombol WA interaktif
-        for index, row in df.iterrows():
-            j = row.get("jadwal_reminder", {})
+        for patient in filtered_data:
+            j = patient.get("jadwal_reminder", {})
             status_hari = "Tidak Ada Jadwal"
             badge_color = "gray"
             
@@ -90,30 +114,30 @@ else:
                 status_hari = "Hari ke-28"
                 badge_color = "green"
 
-            # Tampilan Card per Pasien
+            # Layout Tampilan Baris Data & Tombol WA
             with st.container():
                 c1, c2, c3, c4 = st.columns([2, 2, 2, 1])
                 
                 with c1:
-                    st.markdown(f"**👤 {row.get('nama')}** ({row.get('umur')} Th)")
-                    st.markdown(f"📍 {row.get('alamat')}")
+                    st.markdown(f"**👤 {patient.get('nama')}** ({patient.get('umur')} Th)")
+                    st.markdown(f"📍 {patient.get('alamat')}")
                 with c2:
-                    st.markdown(f"💼 **Pekerjaan:** {row.get('tempat_bekerja', '-')}")
-                    st.markdown(f"✈️ **Riwayat:** {row.get('riwayat_perjalanan', '-')}")
+                    st.markdown(f"💼 **Pekerjaan:** {patient.get('tempat_bekerja', '-')}")
+                    st.markdown(f"✈️ **Riwayat:** {patient.get('riwayat_perjalanan', '-')}")
                 with c3:
-                    st.markdown(f"📅 **Kunjung:** {row.get('tanggal_berkunjung')}")
+                    st.markdown(f"📅 **Kunjung:** {patient.get('tanggal_berkunjung')}")
                     st.markdown(f"📌 **Status Hari Ini:** :{badge_color}[**{status_hari}**]")
                 with c4:
-                    raw_hp = str(row.get('no_hp', '')).strip()
+                    raw_hp = str(patient.get('no_hp', '')).strip()
                     if raw_hp and raw_hp != '-':
                         formatted_hp = raw_hp.lstrip('0')
                         if not formatted_hp.startswith('62'):
                             formatted_hp = '62' + formatted_hp
                             
                         pesan_wa = (
-                            f"Halo Bapak/Ibu *{row.get('nama')}*,\n\n"
+                            f"Halo Bapak/Ibu *{patient.get('nama')}*,\n\n"
                             f"Salam sehat dari *Puskesmas Tirta Jaya*.\n\n"
-                            f"Ini adalah pengingat otomatis untuk jadwal minum obat / kontrol malaria Anda "
+                            f"Ini adalah pengingat untuk jadwal minum obat / kontrol malaria Anda "
                             f"(*{status_hari}*) pada hari ini. Mohon pastikan obat dihabiskan sesuai dosis.\n\n"
                             f"Terima kasih!"
                         )
@@ -126,5 +150,4 @@ else:
                 
                 st.markdown("---")
 
-# Catatan kaki informasi
-st.markdown("<p style='text-align:center; color:gray; font-size:12px;'>© 2026 Puskesmas Tirta Jaya | Terhubung ke Google Form & GitHub</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; color:gray; font-size:12px;'>© 2026 Puskesmas Tirta Jaya | MALARIA-YA Dashboard</p>", unsafe_allow_html=True)
