@@ -1,7 +1,6 @@
 import streamlit as st
 import json
 import os
-import requests
 import urllib.parse
 from datetime import date, datetime, timedelta
 
@@ -14,20 +13,6 @@ st.set_page_config(
 
 DB_FILE = "pasien_malaria.json"
 LINK_GOOGLE_FORM = "https://docs.google.com/forms/d/e/1FAIpQLSf-SQaYqM3jkpoD4AWjx6nSibUmjRko4JaktBCDlsfwi4H-QA/viewform"
-
-# Mapping entry ID dari link Google Form baru Anda
-GFORM_URL_SUBMIT = "https://docs.google.com/forms/d/e/1FAIpQLSf-SQaYqM3jkpoD4AWjx6nSibUmjRko4JaktBCDlsfwi4H-QA/formResponse"
-ENTRY_MAP = {
-    "nama": "entry.819546768",
-    "umur": "entry.1707247930",
-    "no_hp": "entry.171471814",
-    "alamat": "entry.1852836632",
-    "tempat_bekerja": "entry.623883531",
-    "riwayat_perjalanan": "entry.2044857570",
-    "diagnosa": "entry.7173462",
-    "pengobatan": "entry.1696014354",
-    "tanggal_berkunjung": "entry.360836308"
-}
 
 # Fungsi aman untuk memuat atau membuat database JSON otomatis
 def load_data():
@@ -70,24 +55,6 @@ def save_data(data):
     with open(DB_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
 
-# Fungsi kirim data otomatis ke Google Form (Background POST)
-def submit_to_google_form(payload_data):
-    form_data = {
-        ENTRY_MAP["nama"]: payload_data["nama"],
-        ENTRY_MAP["umur"]: str(payload_data["umur"]),
-        ENTRY_MAP["no_hp"]: payload_data["no_hp"],
-        ENTRY_MAP["alamat"]: payload_data["alamat"],
-        ENTRY_MAP["tempat_bekerja"]: payload_data["tempat_bekerja"],
-        ENTRY_MAP["riwayat_perjalanan"]: payload_data["riwayat_perjalanan"],
-        ENTRY_MAP["diagnosa"]: payload_data["diagnosa"],
-        ENTRY_MAP["pengobatan"]: payload_data["pengobatan"],
-        ENTRY_MAP["tanggal_berkunjung"]: payload_data["tanggal_berkunjung"]
-    }
-    try:
-        requests.post(GFORM_URL_SUBMIT, data=form_data, timeout=5)
-    except Exception:
-        pass # Mengabaikan error jaringan agar tidak mengganggu aplikasi utama
-
 # Hitung jadwal kontrol Hari ke-3, 7, 14, 28
 def hitung_jadwal_kontrol(tgl_kunjung):
     base_date = datetime.strptime(tgl_kunjung, "%Y-%m-%d").date()
@@ -108,13 +75,14 @@ st.markdown("---")
 
 # Sidebar untuk Input Data & Tautan Google Form
 with st.sidebar:
-    st.header("📥 Input Data Pasien Baru")
-    st.markdown("Data yang disimpan di sini otomatis masuk ke Google Form & database lokal.")
+    st.header("📥 Input Data Pasien")
+    st.markdown("Gunakan Google Form resmi untuk arsip data pusat, atau input cepat di bawah ini:")
     
-    # Tombol Akses Google Form Asli
-    st.markdown(f'<a href="{LINK_GOOGLE_FORM}" target="_blank" style="background-color:#4285F4; color:white; padding:8px 12px; border-radius:6px; text-decoration:none; font-weight:bold; display:block; text-align:center; margin-bottom:15px;">🌐 Buka Google Form Asli</a>', unsafe_allow_html=True)
+    # Tombol Akses Google Form Asli (Dijamin Masuk ke Form Anda)
+    st.markdown(f'<a href="{LINK_GOOGLE_FORM}" target="_blank" style="background-color:#4285F4; color:white; padding:10px 14px; border-radius:6px; text-decoration:none; font-weight:bold; display:block; text-align:center; margin-bottom:15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">🌐 Buka Google Form Resmi</a>', unsafe_allow_html=True)
     st.markdown("---")
     
+    st.subheader("Atau Input Cepat Lokal:")
     with st.form("form_tambah_pasien"):
         f_nama = st.text_input("Nama Lengkap Pasien")
         f_umur = st.number_input("Umur (Tahun)", min_value=1, max_value=120, value=30)
@@ -126,7 +94,7 @@ with st.sidebar:
         f_pengobatan = st.text_input("Pengobatan", value="DHP + Primakuin")
         f_tgl = st.date_input("Tanggal Berkunjung / Hari ke-1", value=date.today())
         
-        submit_btn = st.form_submit_button("Simpan & Kirim ke Google Form")
+        submit_btn = st.form_submit_button("Simpan Data ke Dashboard")
         
         if submit_btn:
             if f_nama and f_hp and f_alamat:
@@ -146,12 +114,9 @@ with st.sidebar:
                     "status": "Aktif"
                 }
                 
-                # Simpan lokal & kirim ke Google Form
                 data_pasien.append(newItem)
                 save_data(data_pasien)
-                submit_to_google_form(newItem)
-                
-                st.success(f"Data pasien **{f_nama}** berhasil disimpan & dikirim ke Google Form!")
+                st.success(f"Data pasien **{f_nama}** berhasil disimpan di dashboard!")
                 st.rerun()
             else:
                 st.error("Mohon isi minimal Nama, No HP, dan Alamat.")
@@ -172,7 +137,7 @@ with col1:
 with col2:
     st.metric(label="Jadwal Kontrol Hari Ini", value=count_today, delta="Prioritas Utama")
 with col3:
-    st.metric(label="Status Sistem", value="🟢 Terhubung ke Google Form")
+    st.metric(label="Status Sistem", value="🟢 Aktif & Siap Digunakan")
 
 st.markdown("---")
 
