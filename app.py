@@ -2,7 +2,7 @@ import streamlit as st
 import json
 import os
 import urllib.parse
-from datetime import date
+from datetime import date, datetime, timedelta
 
 # Konfigurasi Halaman Streamlit
 st.set_page_config(
@@ -27,9 +27,10 @@ def load_data():
                     "alamat": "RT 02 / RW 01, Desa Tirta Jaya",
                     "tempat_bekerja": "Perkebunan Sawit PT Makmur",
                     "riwayat_perjalanan": "Baru pulang dari Palangka Raya",
+                    "diagnosa": "Malaria Vivax / Falciparum",
+                    "pengobatan": "DHP (Dihydroartemisinin-Piperaquine) + Primakuin",
                     "tanggal_berkunjung": "2026-10-12",
                     "jadwal_reminder": {
-                        "h_1": "2026-10-13",
                         "h_3": "2026-10-15",
                         "h_7": "2026-10-19",
                         "h_14": "2026-10-26",
@@ -54,32 +55,28 @@ def save_data(data):
     with open(DB_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
 
-# Fungsi hitung tanggal reminder (H1, H3, H7, H14, H28)
-def hitung_reminder(tgl_kunjung):
-    from datetime import timedelta
+# Fungsi hitung tanggal kunjungan lanjutan sesuai Hari ke-3, 7, 14, 28
+def hitung_jadwal_kontrol(tgl_kunjung):
     base_date = datetime.strptime(tgl_kunjung, "%Y-%m-%d").date()
     return {
-        "h_1": str(base_date + timedelta(days=1)),
         "h_3": str(base_date + timedelta(days=3)),
         "h_7": str(base_date + timedelta(days=7)),
         "h_14": str(base_date + timedelta(days=14)),
         "h_28": str(base_date + timedelta(days=28))
     }
 
-from datetime import datetime
-
 data_pasien = load_data()
 today_str = date.today().strftime("%Y-%m-%d")
 
 # Judul Utama Dashboard
 st.title("🦟 MALARIA-YA")
-st.markdown("### Sistem Pengingat & Manajemen Data Pasien — Puskesmas Tirta Jaya")
+st.markdown("### Sistem Pengingat, Pengobatan & Manajemen Data Pasien — Puskesmas Tirta Jaya")
 st.markdown("---")
 
 # Sidebar untuk Input Data & Tautan Google Form
 with st.sidebar:
-    st.header("📥 Tambah Data Pasien")
-    st.markdown("Isi form di bawah atau gunakan Google Form resmi.")
+    st.header("📥 Input Data Pasien Baru")
+    st.markdown("Isi form di bawah atau gunakan link Google Form resmi.")
     
     # Tombol Akses Google Form Asli
     st.markdown(f'<a href="{LINK_GOOGLE_FORM}" target="_blank" style="background-color:#4285F4; color:white; padding:8px 12px; border-radius:6px; text-decoration:none; font-weight:bold; display:block; text-align:center; margin-bottom:15px;">🌐 Buka Google Form Asli</a>', unsafe_allow_html=True)
@@ -92,7 +89,9 @@ with st.sidebar:
         f_alamat = st.text_area("Alamat Lengkap")
         f_kerja = st.text_input("Tempat Bekerja")
         f_riwayat = st.text_input("Riwayat Perjalanan (1 Bulan Terakhir)")
-        f_tgl = st.date_input("Tanggal Berkunjung / Diagnosis", value=date.today())
+        f_diagnosa = st.selectbox("Diagnosa Medis", ["Malaria Falciparum", "Malaria Vivax", "Malaria Mixed", "Malaria Ovale/Malariae"])
+        f_pengobatan = st.text_input("Pengobatan", value="DHP (Dihydroartemisinin-Piperaquine) + Primakuin")
+        f_tgl = st.date_input("Tanggal Berkunjung / Hari ke-1", value=date.today())
         
         submit_btn = st.form_submit_button("Simpan Data Pasien")
         
@@ -107,8 +106,10 @@ with st.sidebar:
                     "alamat": f_alamat,
                     "tempat_bekerja": f_kerja,
                     "riwayat_perjalanan": f_riwayat,
+                    "diagnosa": f_diagnosa,
+                    "pengobatan": f_pengobatan,
                     "tanggal_berkunjung": tgl_str,
-                    "jadwal_reminder": hitung_reminder(tgl_str),
+                    "jadwal_reminder": hitung_jadwal_kontrol(tgl_str),
                     "status": "Aktif"
                 }
                 data_pasien.append(newItem)
@@ -124,7 +125,7 @@ count_today = 0
 
 for p in data_pasien:
     j = p.get("jadwal_reminder", {})
-    if today_str in [j.get("h_1"), j.get("h_3"), j.get("h_7"), j.get("h_14"), j.get("h_28")]:
+    if today_str in [j.get("h_3"), j.get("h_7"), j.get("h_14"), j.get("h_28")]:
         count_today += 1
 
 # Tampilan Statistik
@@ -132,14 +133,14 @@ col1, col2, col3 = st.columns(3)
 with col1:
     st.metric(label="Total Pasien Terdaftar", value=total_pasien)
 with col2:
-    st.metric(label="Jadwal Reminder Hari Ini", value=count_today, delta="Prioritas Utama")
+    st.metric(label="Jadwal Kontrol Hari Ini", value=count_today, delta="Prioritas Utama")
 with col3:
     st.metric(label="Status Sistem", value="🟢 Aktif & Terhubung")
 
 st.markdown("---")
 
 # Pencarian / Filter Pasien
-st.subheader("📋 Daftar Pemantauan Pasien")
+st.subheader("📋 Daftar Pemantauan & Status Pengobatan Pasien")
 search_query = st.text_input("🔍 Cari berdasarkan Nama Pasien atau Alamat:", "").lower()
 
 if total_pasien == 0:
@@ -157,23 +158,20 @@ else:
     else:
         for patient in filtered_data:
             j = patient.get("jadwal_reminder", {})
-            status_hari = "Tidak Ada Jadwal"
+            status_hari = "Tidak Ada Jadwal Kontrol Hari Ini"
             badge_color = "gray"
             
-            if j.get("h_1") == today_str:
-                status_hari = "Hari ke-1"
-                badge_color = "red"
-            elif j.get("h_3") == today_str:
-                status_hari = "Hari ke-3"
+            if j.get("h_3") == today_str:
+                status_hari = "Kontrol Hari ke-3"
                 badge_color = "orange"
             elif j.get("h_7") == today_str:
-                status_hari = "Hari ke-7"
+                status_hari = "Kontrol Hari ke-7"
                 badge_color = "yellow"
             elif j.get("h_14") == today_str:
-                status_hari = "Hari ke-14"
+                status_hari = "Kontrol Hari ke-14"
                 badge_color = "blue"
             elif j.get("h_28") == today_str:
-                status_hari = "Hari ke-28"
+                status_hari = "Kontrol Hari ke-28"
                 badge_color = "green"
 
             with st.container():
@@ -182,12 +180,15 @@ else:
                 with c1:
                     st.markdown(f"**👤 {patient.get('nama')}** ({patient.get('umur')} Th)")
                     st.markdown(f"📍 {patient.get('alamat')}")
+                    st.markdown(f"🩺 **Diagnosa:** `{patient.get('diagnosa', 'Malaria')}`")
                 with c2:
+                    st.markdown(f"💊 **Pengobatan:** `{patient.get('pengobatan', 'DHP + Primakuin')}`")
                     st.markdown(f"💼 **Pekerjaan:** {patient.get('tempat_bekerja', '-')}")
                     st.markdown(f"✈️ **Riwayat:** {patient.get('riwayat_perjalanan', '-')}")
                 with c3:
-                    st.markdown(f"📅 **Kunjung:** {patient.get('tanggal_berkunjung')}")
+                    st.markdown(f"📅 **Tgl Kunjung (H-1):** {patient.get('tanggal_berkunjung')}")
                     st.markdown(f"📌 **Status Hari Ini:** :{badge_color}[**{status_hari}**]")
+                    st.markdown(f"<small>Jadwal Kontrol: H3: {j.get('h_3')} | H7: {j.get('h_7')} | H14: {j.get('h_14')} | H28: {j.get('h_28')}</small>", unsafe_allow_html=True)
                 with c4:
                     raw_hp = str(patient.get('no_hp', '')).strip()
                     if raw_hp and raw_hp != '-':
@@ -198,9 +199,9 @@ else:
                         pesan_wa = (
                             f"Halo Bapak/Ibu *{patient.get('nama')}*,\n\n"
                             f"Salam sehat dari *Puskesmas Tirta Jaya*.\n\n"
-                            f"Ini adalah pengingat untuk jadwal minum obat / kontrol malaria Anda "
-                            f"(*{status_hari}*) pada hari ini. Mohon pastikan obat dihabiskan sesuai dosis.\n\n"
-                            f"Terima kasih!"
+                            f"Ini adalah pengingat untuk jadwal kontrol & evaluasi pengobatan malaria Anda "
+                            f"(*{status_hari}*) pada hari ini.\n\n"
+                            f"Pastikan obat DHP dan Primakuin diminum teratur sesuai anjuran. Terima kasih!"
                         )
                         encoded_msg = urllib.parse.quote(pesan_wa)
                         wa_url = f"https://api.whatsapp.com/send?phone={formatted_hp}&text={encoded_msg}"
