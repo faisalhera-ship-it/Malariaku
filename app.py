@@ -13,7 +13,6 @@ st.set_page_config(
 )
 
 DB_FILE = "pasien_malaria.json"
-# URL Web App Google Apps Script terbaru Anda
 GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwtIFK6lc1aTu_fp6l2lod5KQJBljeiYaVnwXfoz1xiOuvCUsdkZlqsab-TpnFWcEuT/exec"
 
 # Fungsi aman untuk memuat atau membuat database JSON lokal
@@ -215,3 +214,17 @@ else:
                         pesan_wa = (
                             f"Halo Bapak/Ibu *{patient.get('nama')}*,\n\n"
                             f"Salam sehat dari *Puskesmas Tirta Jaya*.\n\n"
+                            f"Ini adalah pengingat untuk jadwal kontrol & evaluasi pengobatan malaria Anda "
+                            f"(*{status_hari}*) pada hari ini.\n\n"
+                            f"Pastikan obat DHP dan Primakuin diminum teratur sesuai anjuran. Terima kasih!"
+                        )
+                        encoded_msg = urllib.parse.quote(pesan_wa)
+                        wa_url = f"https://api.whatsapp.com/send?phone={formatted_hp}&text={encoded_msg}"
+                        
+                        st.markdown(f'<a href="{wa_url}" target="_blank" style="background-color:#22c55e; color:white; padding:8px 14px; border-radius:6px; text-decoration:none; font-weight:bold; display:inline-block; margin-top:10px;">💬 Kirim WA</a>', unsafe_allow_html=True)
+                    else:
+                        st.text("No HP Invalid")
+                
+                st.markdown("---")
+
+st.markdown("<p style='text-align:center; color:gray; font-size:12px;'>© 2026 Puskesmas Tirta Jaya | MALARIA-YA Dashboard</p>", unsafe_allow_html=True)
